@@ -154,40 +154,42 @@ for row in input_data.split('\n'):
 # pprint(engine_schematic)
 
 column_length = len(engine_schematic)
-row_length = len(engine_schematic[0])
+row_length = len(engine_schematic[0])-1
 
 
-def is_symbol_nearby(number_row, left_index, right_index, number) -> bool:
+def is_symbol_nearby(number_row, left_index, right_index) -> bool:
+    # print(f'Thats Number we are checking {number}')
+    # print(f'Row Length { row_length} --- Right Index { right_index}')
     left_index = left_index - 1 if left_index != 0 else left_index
     right_index = right_index + 1 if right_index != row_length else right_index
     min_row = number_row - 1 if number_row != 0 else number_row
     max_row = number_row + 1 if number_row + 1 != column_length else number_row
-    sym = [[], [], []]
     # print(f'Left {left_index}, Right {right_index}, Down {min_row}, Up {max_row}, Column Length {column_length}')
     counter = 0
     for row in range(min_row, max_row + 1):
         for index in range(left_index, right_index + 1):
             symbol = engine_schematic[row][index]
-            sym[counter].append(symbol)
             # print(f'Checking Symbol: {symbol} in row {row}, column {index}')
-            if symbol != '.':
+            if symbol != '.' and not symbol.isdigit():
                 # print('Found the symbol')
                 return True
-        counter += 1
-    print(f'Number {number}')
-    pprint(sym)
     return False
 
-xd_lista = []
 
 for row_number, row in enumerate(engine_schematic):
     number: str = ''
     number_start: int = 1000
     number_end: int = 0
+
     for column_number, column in enumerate(row):
-        if not column.isdigit() and number != '':
+        if column.isdigit():
+            number += column
+            number_start = column_number if column_number < number_start else number_start
+            number_end = column_number if column_number > number_end else number_end
+
+        if not column.isdigit() and number != '' or len(row)-1 == column_number and number != '':
             # print(number)
-            if is_symbol_nearby(row_number, number_start, number_end, number):
+            if is_symbol_nearby(row_number, number_start, number_end):
                 # print(f'Before {output} + {number}')
                 output += int(number)
                 # print(f'After {output}')
@@ -200,10 +202,4 @@ for row_number, row in enumerate(engine_schematic):
             number_start = 1000
             number_end = 0
 
-        if column.isdigit():
-            number += column
-            number_start = column_number if column_number < number_start else number_start
-            number_end = column_number if column_number > number_end else number_end
-
 print(output)
-# pprint(output_data)
