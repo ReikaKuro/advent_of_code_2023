@@ -1,5 +1,4 @@
 import re
-from pprint import pprint
 
 
 input_data: str = '''Card   1: 69 61 27 58 89 52 81 94 40 51 | 43 40 52 90 37 97 89 80 69 42 51 70 94 58 10 73 21 29 61 63 57 79 81 27 35
@@ -224,7 +223,7 @@ for data in input_data.split('\n'):
     parsed_data = re.match(r'Card\s+\d+:\s+(.*)\s\|\s(.*)', data)
     winning_numbers.append(parsed_data[1].replace('  ', ' ').split(' '))
     numbers.append(parsed_data[2].replace('  ', ' ').split(' '))
-pprint(winning_numbers)
+
 for index, _ in enumerate(winning_numbers):
     winning_num_count = 0
     for winning_number in winning_numbers[index]:
