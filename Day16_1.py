@@ -1,7 +1,7 @@
 from pprint import pprint
 
 input_data: str = ''
-with open('input_day16_3', 'r') as f:
+with open('input_day16_1', 'r') as f:
     input_data = f.read()
 
 fake_map = []
