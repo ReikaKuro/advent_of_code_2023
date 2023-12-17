@@ -131,11 +131,9 @@ except KeyboardInterrupt as e:
     print(f'ERROR {e}')
     print(to_run)
 
-
-count = 0
 for row in energized_map:
     for number in row:
         if number != 0:
             output += 1
-            count += 1
+
 print(f'Final output is: {output}')
