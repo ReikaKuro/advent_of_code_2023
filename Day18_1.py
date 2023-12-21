@@ -1,28 +1,20 @@
 import re
+import time
+
 from sty import fg
 
-
-aoc_input: str = '''R 6 (#70c710)
-D 5 (#0dc571)
-L 2 (#5713f0)
-D 2 (#d2c081)
-R 2 (#59c680)
-D 2 (#411b91)
-L 5 (#8ceee2)
-U 2 (#caa173)
-L 1 (#1b58a2)
-U 2 (#caa171)
-R 2 (#7807d2)
-U 3 (#a77fa3)
-L 2 (#015232)
-U 2 (#7a21e3)'''
-with open('input_day18_1', 'r') as f:
-    aoc_input = f.read()
+VISUALIZE_DRAWING = True
+VISUALIZE_FILLING = True
+DRAW_TIME_SLEEP = 0  # Set to 0 for huge big arrays
+FILL_TIME_SLEEP = 0  # Set to 0 for huge big arrays
+COLOR_DEBUG = False
+DEBUG = False
 
 
 def hex_to_rgb(hex_value) -> tuple:
     rgb_value = re.findall(r'(.{2})(.{2})(.{2})', hex_value)[0]
-    # print(f'hex_to_rgb: Converted {hex_value} -> {rgb_value}')
+    if COLOR_DEBUG:
+        print(f'hex_to_rgb: Converted {hex_value} -> {rgb_value}')
     return rgb_value
 
 
@@ -32,8 +24,17 @@ def color_text(string, color_hex) -> str:
     G = int(G, 16)
     B = int(B, 16)
     colored_string = f'{fg(R, G, B) + string + fg.rs}'
-    # print(f'color_text: Example output --> {colored_string}')
+    if COLOR_DEBUG:
+        print(f'color_text: Example output --> {colored_string}')
     return colored_string
+
+
+def print_and_delete(text) -> None:
+    MOVE_CURSOR_UP = '\033[1A'
+    ERASE = '\x1b[2K'
+
+    print(text)
+    print((MOVE_CURSOR_UP + ERASE) * len(text.split('\n')), end='')
 
 
 def define_list_size(instructions) -> tuple:
@@ -64,7 +65,8 @@ def define_list_size(instructions) -> tuple:
             max_tilts['DOWN'] = current_y_size if current_y_size > max_tilts['DOWN'] else max_tilts['DOWN']
         max_x_size = abs(max_tilts['LEFT']) + max_tilts['RIGHT'] + 1
         max_y_size = abs(max_tilts['UP']) + max_tilts['DOWN'] + 1
-    print(f'define_list_size: List size is = ({max_x_size, max_y_size}) for these MAX TILTS {max_tilts}')
+    if DEBUG:
+        print(f'define_list_size: List size is = ({max_x_size, max_y_size}) for these MAX TILTS {max_tilts}')
     return max_x_size, max_y_size, abs(max_tilts['LEFT']), abs(max_tilts['UP'])
 
 
@@ -75,35 +77,55 @@ def prepare_hashmap(instructions) -> tuple[list, int, int]:
         temp_list.append([])
         for x_value in range(list_x):
             temp_list[y_value].append(0)
-
-    # print(f'prepare_hashmap: Returning hashmap\n{temp_list}')
+    if DEBUG:
+        print(f'prepare_hashmap: Returning hashmap\n{temp_list}')
     return temp_list, x_offset, y_offset
 
 
-def calculate_holes(filled_map) -> int:
-    filled_map = filled_map
-    #TODO
-    # Reowrk it into new function that will fill the polygon
-    holes: int = 0
-    for row_index, row in enumerate(filled_map):
-        hashtag_count: int = 0
-        last_hashtag: bool = False
-        for column_index, column in enumerate(row):
-            inside_polygon: bool = True if hashtag_count != 0 else False
-            if '#' in str(column):
-                holes += 1
-                if not last_hashtag:
-                    hashtag_count += 1
-                    if hashtag_count == 2:
-                        hashtag_count = 0
-                last_hashtag = True
-            elif 0 == column and inside_polygon:
-                holes += 1
-                filled_map[row_index][column_index] = color_text('@', 'ff0000')
-                last_hashtag = False
-        print(f'{convert_to_final_map(filled_map)}')
+def fill_polygon(filled_map) -> list:
+    start_points: list = []
+    middle_of_map: int = round(len(filled_map) / 2)
+    one_half_iterated = False
 
-    return holes
+    for character_index, character in enumerate(filled_map[middle_of_map]):
+        if character_index < len(filled_map):
+            if '#' in str(character) and filled_map[middle_of_map][character_index + 1] == 0:
+                if '#' in str(filled_map[middle_of_map - 1][character_index]) \
+                        and '#' in str(filled_map[middle_of_map + 1][character_index]):
+                    start_points.append((character_index + 1, middle_of_map))
+                    break
+        else:
+            if middle_of_map == round(len(filled_map) / 2) - 1 and one_half_iterated:
+                raise IndexError('All array has been iterated and could not find the entrance')
+            if middle_of_map < len(filled_map) - 1:
+                middle_of_map = 1
+                one_half_iterated = True
+            else:
+                middle_of_map += 1
+
+    if DEBUG:
+        x_point, y_point = start_points[0]
+        print(f'fill_polygon: Start Point = {start_points}, '
+              f'{filled_map[y_point][x_point - 1]} -> {filled_map[y_point][x_point]}')
+
+    already_checked: list = []
+    new_map: list = filled_map
+    for x_point, y_point in start_points:
+        if (x_point, y_point) not in already_checked:
+            if new_map[y_point + 1][x_point] == 0:
+                start_points.append((x_point, y_point + 1))
+            if new_map[y_point][x_point + 1] == 0:
+                start_points.append((x_point + 1, y_point))
+            if new_map[y_point - 1][x_point] == 0:
+                start_points.append((x_point, y_point - 1))
+            if new_map[y_point][x_point - 1] == 0:
+                start_points.append((x_point - 1, y_point))
+            new_map[y_point][x_point] = color_text('#', 'ff0000')
+            if VISUALIZE_FILLING:
+                print_and_delete(convert_to_final_map(new_map))
+                time.sleep(FILL_TIME_SLEEP)
+        already_checked.append((x_point, y_point))
+    return new_map
 
 
 def convert_to_final_map(map_as_list) -> str:
@@ -119,42 +141,60 @@ def convert_to_final_map(map_as_list) -> str:
 
 
 def main(dig_plan) -> None:
-    #TODO
-    # Think about an algorithm for filling spae inside a polygon
     instructions: list = re.findall(r'([A-Z])\s(\d+)\s\(#(.*)\)', dig_plan)
     dig_plan, x_offset, y_offset = prepare_hashmap(instructions)
     x_start_pos = x_offset
     y_start_pos = y_offset
-    # steps might delete later
-    steps: list= []
+
     for dig_direction, dig_length, color in instructions:
         for _ in range(int(dig_length)):
-            # print(f'Position X {x_start_pos}, Y {y_start_pos}')
-            # print(f'{convert_to_final_map(dig_plan)}')
+            if DEBUG:
+                print(f'outer line draw: Direction: {dig_direction} Position X {x_start_pos}, Y {y_start_pos}')
+
             if dig_direction == 'R':
                 x_start_pos = (x_start_pos + 1) if x_start_pos < len(dig_plan[0]) - 1 else 0
                 dig_plan[y_start_pos][x_start_pos] = color_text('#', color)
-                # Delete steps later
-                steps.append((x_start_pos, y_start_pos))
+
             if dig_direction == 'L':
                 x_start_pos = (x_start_pos - 1) if x_start_pos != 0 else len(dig_plan[0]) - 1
                 dig_plan[y_start_pos][x_start_pos] = color_text('#', color)
-                # Delete steps later
-                steps.append((x_start_pos, y_start_pos))
+
             if dig_direction == 'D':
                 y_start_pos = (y_start_pos + 1) if y_start_pos < len(dig_plan) - 1 else 0
                 dig_plan[y_start_pos][x_start_pos] = color_text('#', color)
-                # Delete steps later
-                steps.append((x_start_pos, y_start_pos))
+
             if dig_direction == 'U':
                 y_start_pos = (y_start_pos - 1) if y_start_pos != 0 else len(dig_plan) - 1
                 dig_plan[y_start_pos][x_start_pos] = color_text('#', color)
-                # Delete steps later
-                steps.append((x_start_pos, y_start_pos))
-    final_colored_map = convert_to_final_map(dig_plan)
-    print(final_colored_map)
-    output_part1 = calculate_holes(dig_plan)
-    print(f'Final output = {output_part1}')
+
+            if VISUALIZE_DRAWING:
+                print_and_delete(convert_to_final_map(dig_plan))
+                time.sleep(DRAW_TIME_SLEEP)
+
+    filled_map = convert_to_final_map(fill_polygon(dig_plan))
+    output_part1 = filled_map.count('#')
+    print(f'{filled_map}\n\nFinal output = {output_part1}')
 
 
-main(aoc_input)
+if __name__ == '__main__':
+    test_input: str = '''R 6 (#70c710)
+    D 5 (#0dc571)
+    L 2 (#5713f0)
+    D 2 (#d2c081)
+    R 2 (#59c680)
+    D 2 (#411b91)
+    L 5 (#8ceee2)
+    U 2 (#caa173)
+    L 1 (#1b58a2)
+    U 2 (#caa171)
+    R 2 (#7807d2)
+    U 3 (#a77fa3)
+    L 2 (#015232)
+    U 2 (#7a21e3)'''
+
+    main(test_input)  # Should be 64
+
+    with open('input_day18_1', 'r') as f:
+        aoc_input = f.read()
+
+    main(aoc_input)
