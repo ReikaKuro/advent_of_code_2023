@@ -5,8 +5,8 @@ from sty import fg
 
 VISUALIZE_DRAWING = True
 VISUALIZE_FILLING = True
-DRAW_TIME_SLEEP = 0  # Set to 0 for huge big arrays
-FILL_TIME_SLEEP = 0  # Set to 0 for huge big arrays
+DRAW_TIME_SLEEP = 0  # Set to 0 for huge arrays
+FILL_TIME_SLEEP = 0  # Set to 0 for huge arrays
 COLOR_DEBUG = False
 DEBUG = False
 
@@ -84,29 +84,35 @@ def prepare_hashmap(instructions) -> tuple[list, int, int]:
 
 def fill_polygon(filled_map) -> list:
     start_points: list = []
-    middle_of_map: int = round(len(filled_map) / 2)
+    injection_row: int = round(len(filled_map) / 2)
     one_half_iterated = False
+    entrance_found = False
 
-    for character_index, character in enumerate(filled_map[middle_of_map]):
-        if character_index < len(filled_map):
-            if '#' in str(character) and filled_map[middle_of_map][character_index + 1] == 0:
-                if '#' in str(filled_map[middle_of_map - 1][character_index]) \
-                        and '#' in str(filled_map[middle_of_map + 1][character_index]):
-                    start_points.append((character_index + 1, middle_of_map))
-                    break
-        else:
-            if middle_of_map == round(len(filled_map) / 2) - 1 and one_half_iterated:
-                raise IndexError('All array has been iterated and could not find the entrance')
-            if middle_of_map < len(filled_map) - 1:
-                middle_of_map = 1
-                one_half_iterated = True
+    while True:
+        for character_index, character in enumerate(filled_map[injection_row]):
+            if character_index < len(filled_map[0]) - 1:
+                if '#' in str(character) and filled_map[injection_row][character_index + 1] == 0:
+                    if '#' in str(filled_map[injection_row - 1][character_index]) \
+                            and '#' in str(filled_map[injection_row + 1][character_index]):
+                        start_points.append((character_index + 1, injection_row))
+                        entrance_found = True
+                        break
             else:
-                middle_of_map += 1
+                if injection_row == round(len(filled_map) / 2) - 1 and one_half_iterated:
+                    raise IndexError('All array has been iterated and could not find the entrance')
+                if injection_row < len(filled_map) - 1:
+                    injection_row = 1
+                    one_half_iterated = True
+                else:
+                    injection_row += 1
+        if entrance_found:
+            break
 
     if DEBUG:
+        print(f'fill_polygon: Start Point = {start_points}')
+        print(f'fill_polygon: one_half_iterated: {one_half_iterated}')
         x_point, y_point = start_points[0]
-        print(f'fill_polygon: Start Point = {start_points}, '
-              f'{filled_map[y_point][x_point - 1]} -> {filled_map[y_point][x_point]}')
+        print(f'fill_polygon: {filled_map[y_point][x_point - 1]} -> {filled_map[y_point][x_point]}')
 
     already_checked: list = []
     new_map: list = filled_map
@@ -192,9 +198,9 @@ if __name__ == '__main__':
     L 2 (#015232)
     U 2 (#7a21e3)'''
 
-    main(test_input)  # Should be 64
+    main(test_input)  # Should be 62
 
     with open('input_day18_1', 'r') as f:
         aoc_input = f.read()
 
-    main(aoc_input)
+    # main(aoc_input)  # Should be 28911 for input_day18_1
