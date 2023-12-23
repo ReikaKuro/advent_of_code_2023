@@ -203,4 +203,4 @@ if __name__ == '__main__':
     with open('input_day18_1', 'r') as f:
         aoc_input = f.read()
 
-    # main(aoc_input)  # Should be 28911 for input_day18_1
+    main(aoc_input)  # Should be 28911 for input_day18_1
